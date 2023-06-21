@@ -1,9 +1,54 @@
-import {Box, Button, Container, TextField, Typography} from "@mui/material";
+import {Box, Button, Container, Stack, TextField, Typography} from "@mui/material";
 import Head from "next/head";
-import {useForm} from "react-hook-form";
+import { useFieldArray, useForm } from "react-hook-form";
+import * as yup from "yup"
+import { yupResolver } from "@hookform/resolvers/yup"
 
 export default function Home() {
-	const {register, handleSubmit} = useForm({});
+
+	// Creamos un esquema de validacion con yup
+  const shema = yup.object({
+    receta: yup.string().required("El campo receta es requerido"),
+		ingredientes: yup.array().of(
+			yup.object().shape({
+				value: yup.string().required("El campo ingrediente es requerido")
+			})
+		).min(2, "Debes agregar al menos un ingrediente")
+  
+  })
+
+  /**
+   * useForm: es un hook que nos permite crear un formulario con validaciones
+   * Puedo inicializarlo con un objeto que contenga los valores iniciales de los campos de ingredientes
+   */
+
+  const { register, handleSubmit, control, formState: {errors} } = useForm({
+    defaultValues: {
+      receta: "",
+      ingredientes: [
+        {
+          value: ""
+        },
+        {
+          value: ""
+        },
+      ],
+    },
+    resolver: yupResolver(shema),
+  });
+
+	// Importamos el useFieldArray de react-hook-form
+	/**
+	 * Realizamos destructuring para obtener los metodos que necesitamos en este caso:
+	 * fields: es un array que contiene los campos que se han agregado
+	 * append: es una funcion que nos permite agregar un nuevo campo al array final
+	 * remove: es una funcion que nos permite eliminar un campo del array final
+	 * existen mas metodos que puedes revisar en la documentacion oficial
+	 */
+	const {fields, append, remove} = useFieldArray({
+		control: control,
+		name: "ingredientes",
+	});
 
 	return (
 		<>
@@ -17,34 +62,62 @@ export default function Home() {
 				<form onSubmit={handleSubmit((data) => console.log(data))}>
 					<Typography variant="h4" sx={{mb: 4}}>
 						Agregar nuevo ingrediente
-          </Typography>
-          
-					<Box>
-						<TextField
-							id="outlined-basic"
-							label="Ingrediente"
-							variant="outlined"
-							{...register(`ingrediente`)}
-							className="input"
-							sx={{
-								width: 1,
-								my: 2,
-								borderRadius: 1,
-							}}
-						/>
-						<Button
-							variant="outlined"
-							className="button"
-							sx={{width: 1, mt: 4, borderRadius: 1}}
-						>
-							Eliminar
-						</Button>
-					</Box>
+					</Typography>
+
+					<TextField
+						id="outlined-basic"
+						label="Receta"
+						variant="outlined"
+						{...register(`receta`)}
+						className="input"
+						sx={{
+							width: 1,
+							my: 2,
+							borderRadius: 1,
+						}}
+						// Para mostrar los errores de validacion
+						// error={errors.receta ? true : false}
+						// error={!!errors.receta}
+						error={Boolean(errors.receta)}
+						helperText={errors.receta?.message}
+					/>
+
+					{fields.map((item, index) => {
+						return (
+							<Stack direction='row' spacing={2} key={item.id} sx={{marginTop: 3}}>
+								<TextField
+									id="outlined-basic"
+									label="Ingrediente"
+									variant="outlined"
+									{...register(`ingredientes.${index}.value`)}
+									className="input"
+									sx={{
+										width: 1,
+										borderRadius: 1,
+									}}
+									// Para mostrar los errores de validacion
+									// error={errors.ingredientes?.[index]?.value ? true : false}
+									// error={!!errors.ingredientes?.[index]?.value}
+									error={Boolean(errors.ingredientes?.[index])}
+									helperText={errors.ingredientes?.[index]?.value?.message}
+								/>
+								<Button
+									variant="outlined"
+									className="button"
+                  sx={{ width: 0.3, borderRadius: 1 }}
+                  onClick={() => remove(index)}
+								>
+									Eliminar
+								</Button>
+							</Stack>
+						);
+					})}
 
 					<Button
-						variant="contained"
-						className="button"
-						sx={{width: 1, mt: 4, borderRadius: 1}}
+            variant="contained"
+            className="button"
+            sx={{ width: 1, mt: 4, borderRadius: 1 }}
+            onClick={() => append({ value: "" })}
 					>
 						Agregar ingrediente
 					</Button>
