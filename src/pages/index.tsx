@@ -1,9 +1,41 @@
-import {Box, Button, Container, TextField, Typography} from "@mui/material";
+import {Box, Button, Container, Stack, TextField, Typography} from "@mui/material";
 import Head from "next/head";
-import {useForm} from "react-hook-form";
+import { useFieldArray, useForm } from "react-hook-form";
+
+// Yup
+import { yupResolver } from "@hookform/resolvers/yup"
+import * as yup from "yup";
 
 export default function Home() {
-	const {register, handleSubmit} = useForm({});
+
+	const shema = yup.object({
+		receta: yup.string().required("El campo es requerido"),
+		ingredientes: yup.array().of(
+			yup.object({
+				value: yup.string().required("El campo es requerido"),
+			})
+		)
+	})
+
+	const { register, handleSubmit, control, formState:{errors} } = useForm({
+		defaultValues: {
+			receta: "",
+			ingredientes: [
+				{
+					value: "",
+				},
+				{
+					value: "",
+				}
+			],
+		},
+		resolver: yupResolver(shema),
+	});
+
+	const {fields, append, remove} = useFieldArray({
+		control,
+		name: "ingredientes",
+	});
 
 	return (
 		<>
@@ -17,34 +49,56 @@ export default function Home() {
 				<form onSubmit={handleSubmit((data) => console.log(data))}>
 					<Typography variant="h4" sx={{mb: 4}}>
 						Agregar nuevo ingrediente
-          </Typography>
-          
-					<Box>
-						<TextField
-							id="outlined-basic"
-							label="Ingrediente"
-							variant="outlined"
-							{...register(`ingrediente`)}
-							className="input"
-							sx={{
-								width: 1,
-								my: 2,
-								borderRadius: 1,
-							}}
-						/>
-						<Button
-							variant="outlined"
-							className="button"
-							sx={{width: 1, mt: 4, borderRadius: 1}}
-						>
-							Eliminar
-						</Button>
-					</Box>
+					</Typography>
+
+					<TextField
+						id="outlined-basic"
+						label="Receta"
+						variant="outlined"
+						{...register(`receta`)}
+						className="input"
+						sx={{
+							width: 1,
+							my: 2,
+							borderRadius: 1,
+						}}
+						error={errors.receta ? true : false}
+						helperText={errors.receta?.message}
+					/>
+
+					{fields.map((item, index) => {
+						return (
+							<Stack direction="row" key={item.id} spacing={2} sx={{marginTop: 4}}>
+								<TextField
+									id="outlined-basic"
+									label="Ingrediente"
+									variant="outlined"
+									{...register(`ingredientes.${index}.value`)}
+									className="input"
+									sx={{
+										width: 0.7,
+										borderRadius: 1,
+									}}
+									error={errors.ingredientes?.[index]?.value ? true : false}
+									helperText={errors.ingredientes?.[index]?.value?.message}
+								/>
+								<Button
+									variant="outlined"
+									className="button"
+									sx={{ width: 0.3, borderRadius: 1 }}
+									onClick={() => remove(index)}
+								>
+									Eliminar
+								</Button>
+							</Stack>
+						);
+					})}
 
 					<Button
 						variant="contained"
 						className="button"
-						sx={{width: 1, mt: 4, borderRadius: 1}}
+						sx={{ width: 1, mt: 4, borderRadius: 1 }}
+						onClick={() => append({ value: ""})}
 					>
 						Agregar ingrediente
 					</Button>
